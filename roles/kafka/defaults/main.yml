@@ -1,0 +1,33 @@
+---
+kafka_silent: false
+kafka_namespace: kafka
+kafka_become_override: false
+kafka_operator_catalog_create: true
+kafka_operator_catalog_name: 'olm-snapshot-redhat-catalog-20251209'
+kafka_operator_catalog_namespace: openshift-marketplace
+kafka_operator_catalog_display_name: "{{ kafka_operator_catalog_name }}"
+kafka_operator_catalog_image: 'quay.io/gpte-devops-automation/olm_snapshot_redhat_catalog'
+kafka_operator_catalog_image_tag: 'v4.20_2025_12_09'
+kafka_operator_catalog_publisher: 'Red Hat AgnosticD'
+kafka_operator_catalog_source_type: 'grpc'
+
+# Apache Kafka Operator
+kafka_operator_name: amq-streams
+kafka_operator_namespace: openshift-operators
+kafka_operator_labels: {}
+kafka_operator_channel: stable
+kafka_operator_install_plan_automatic: true
+kafka_operator_operator_name: amq-streams
+kafka_operator_source: "{{ (kafka_operator_catalog_create == true) | ternary(kafka_operator_catalog_name, 'redhat-operators') }}"
+kafka_operator_source_namespace: 'openshift-marketplace'
+kafka_operator_csv_name_prefix: amqstreams
+kafka_operator_starting_csv: 'amqstreams.v3.0.1-7'
+
+# Kafka Cluster Configuration
+kafka_cluster_name: cluster
+kafka_cluster_external_secret_name: "{{ kafka_cluster_name }}-external-cert"
+
+# Kafka Topic Configuration
+kafka_topic_name: httpd-error-logs
+kafka_topic_partitions: 1
+kafka_topic_replication_factor: 1

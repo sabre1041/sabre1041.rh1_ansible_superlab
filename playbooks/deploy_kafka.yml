@@ -1,0 +1,11 @@
+---
+
+- name: Deploy kafka
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Playbook deploy_kafka | Include role kafka
+      ansible.builtin.include_role:
+        name: sabre1041.rh1_ansible_superlab.kafka
+      vars:
+        ACTION: 'create' # noqa var-naming[pattern]

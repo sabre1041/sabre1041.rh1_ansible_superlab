@@ -1,0 +1,38 @@
+---
+# tasks file for jeffcpullen.agnosticp.kafka
+
+- name: Running Pre Workload Tasks
+  vars:
+    kafka_state: 'present'
+  ansible.builtin.include_tasks:
+    file: ./pre_workload.yml
+    apply:
+      become: "{{ kafka_become_override | bool }}"
+  when: ACTION == "create" or ACTION == "provision"
+
+- name: Running Workload Tasks
+  ansible.builtin.include_tasks:
+    file: ./workload.yml
+    apply:
+      become: "{{ kafka_become_override | bool }}"
+  vars:
+    kafka_state: 'present'
+  when: ACTION == "create" or ACTION == "provision"
+
+- name: Running Post Workload Tasks
+  vars:
+    kafka_state: 'present'
+  ansible.builtin.include_tasks:
+    file: ./post_workload.yml
+    apply:
+      become: "{{ kafka_become_override | bool }}"
+  when: ACTION == "create" or ACTION == "provision"
+
+- name: Running Workload removal Tasks
+  vars:
+    kafka_state: 'absent'
+  ansible.builtin.include_tasks:
+    file: ./remove_workload.yml
+    apply:
+      become: "{{ kafka_become_override | bool }}"
+  when: ACTION == "destroy" or ACTION == "remove"

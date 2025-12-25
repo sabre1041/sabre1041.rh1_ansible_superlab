@@ -1,0 +1,96 @@
+---
+
+- name: Role kafka | Task workload | Install Apache Kafka Operator
+  ansible.builtin.include_tasks: ./install_operator.yml
+  vars:
+    install_operator_action: install
+    install_operator_name: "{{ kafka_operator_name }}"
+    install_operator_namespace: "{{ kafka_operator_namespace }}"
+    install_operator_catalog: "{{ kafka_operator_catalog_name }}"
+    install_operator_channel: "{{ kafka_operator_channel }}"
+    install_operator_automatic_install_plan_approval: "{{ kafka_operator_install_plan_automatic | default(true) }}" # yamllint disable-line rule:line-length
+    install_operator_starting_csv: "{{ kafka_operator_starting_csv }}"
+    install_operator_packagemanifest_name: "{{ kafka_operator_name }}"
+    install_operator_catalogsource_setup: "{{ kafka_operator_catalog_create }}"
+    install_operator_catalogsource_name: "{{ kafka_operator_catalog_name | default('') }}"
+    install_operator_catalogsource_image: "{{ kafka_operator_catalog_image | default('') }}"
+    install_operator_catalogsource_image_tag: "{{ kafka_operator_catalog_image_tag | default('') }}"
+    install_operator_catalogsource_namespace: "{{ kafka_operator_catalog_namespace }}"
+    install_operator_csv_nameprefix: "{{ kafka_operator_csv_name_prefix }}"
+    install_operator_install_csv_ignore_error: false
+    install_operator_catalogsource_pullsecrets: []
+
+- name: "Role kafka | Task workload | Ensure Kafka Namespace exists {{ kafka_namespace }}"
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: Namespace
+    name: "{{ kafka_namespace }}"
+
+- name: Role kafka | Task workload | Get ingress controller default certificate name
+  kubernetes.core.k8s_info:
+    api_version: operator.openshift.io/v1
+    kind: IngressController
+    name: default
+    namespace: openshift-ingress-operator
+  register: r_ingress_controller
+
+- name: Role kafka | Task workload | Get ingress certificate secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ r_ingress_controller.resources[0].spec.defaultCertificate.name | default('router-certs-default') }}"
+    namespace: openshift-ingress
+  register: r_ingress_cert_secret
+
+- name: Role kafka | Task workload | Create external certificate secret for Kafka cluster {{ kafka_cluster_name }}
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ kafka_cluster_external_secret_name }}"
+        namespace: "{{ kafka_namespace }}"
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ r_ingress_cert_secret.resources[0].data['tls.crt'] }}"
+        tls.key: "{{ r_ingress_cert_secret.resources[0].data['tls.key'] }}"
+
+- name: "Role kafka | Task workload | Create Kafka cluster {{ kafka_cluster_name }}"
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'kafka.yaml.j2') | from_yaml }}"
+
+- name: "Role kafka | Task workload | Create Kafka nodepools for Kafka cluster {{ kafka_cluster_name }}"
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', kafka_nodepool.path) | from_yaml }}"
+  loop_control:
+    label: "{{ kafka_nodepool.name }}"
+    loop_var: kafka_nodepool
+  loop:
+    - { name: 'broker', 'path': 'kafkanodepool_broker.yaml.j2' }
+    - { name: 'controller', 'path': 'kafkanodepool_controller.yaml.j2' }
+
+- name: "Role kafka | Task workload | Wait until Kafka cluster {{ kafka_cluster_name }} is ready"
+  kubernetes.core.k8s_info:
+    api_version: kafka.strimzi.io/v1beta2
+    kind: Kafka
+    namespace: "{{ kafka_namespace }}"
+    name: "{{ kafka_cluster_name }}"
+  register: r_kafka_cluster_entity_operator
+  retries: 90
+  delay: 30
+  until:
+  - r_kafka_cluster_entity_operator.resources is defined
+  - r_kafka_cluster_entity_operator.resources | length | int > 0
+  - r_kafka_cluster_entity_operator.resources[0].status is defined
+  - r_kafka_cluster_entity_operator.resources[0].status.conditions is defined
+  - r_kafka_cluster_entity_operator.resources[0].status.conditions | length | int > 0
+  - r_kafka_cluster_entity_operator.resources | json_query('[0].status.conditions[?type==`Ready`].status | [0]') == "True"
+
+- name: "Role kafka | Task workload | Create Kafka Topic {{ kafka_topic_name }}"
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'kafkatopic.yaml.j2') | from_yaml }}"
