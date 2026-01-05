@@ -1,0 +1,11 @@
+---
+
+- name: Deploy LibreChat
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Playbook deploy_librechat | Include role librechat
+      ansible.builtin.include_role:
+        name: sabre1041.rh1_ansible_superlab.librechat
+      vars:
+        ACTION: 'create' # noqa var-naming[pattern]

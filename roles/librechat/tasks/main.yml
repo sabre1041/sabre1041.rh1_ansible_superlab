@@ -1,0 +1,30 @@
+---
+
+- name: Verify Required Parameters Defined
+  ansible.builtin.assert:
+    that:
+      - "lookup('ansible.builtin.vars', required_key) | default('', true) | length > 0"
+    quiet: true
+    fail_msg: "'{{ required_key }}' must be defined and non-empty."
+  loop_control:
+    loop_var: required_key
+  loop:
+    - librechat_litemaas_api_key
+    - librechat_username
+    - librechat_password
+
+- name: Generate LibreChat secrets
+  ansible.builtin.set_fact:
+    librechat_key32: "{{ lookup('password', '/dev/null chars=hexdigits length=32') | lower }}"
+    librechat_key16: "{{ lookup('password', '/dev/null chars=hexdigits length=16') | lower }}"
+
+- name: Create Librechat resources
+  kubernetes.core.k8s:
+    state: present
+    template: "{{ item }}"
+  loop:
+    - librechat-namespace.yml.j2
+    - librechat-route.yml.j2
+    - librechat-secret.yml.j2
+    - librechat-application.yml.j2
+    - librechat-create-user-job.yml.j2

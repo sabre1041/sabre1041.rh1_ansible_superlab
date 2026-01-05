@@ -1,0 +1,23 @@
+---
+
+librechat_litemaas_api_key: ""
+librechat_litemaas_url: https://litellm.apps.maas.redhatworkshops.io/v1
+librechat_litemaas_models: ["llama-scout-17b"]
+
+librechat_namespace: librechat
+librechat_repo: https://github.com/danny-avila/LibreChat
+librechat_repo_tag: v0.8.1
+librechat_repo_path: ./helm/librechat
+
+librechat_config_repo_path: ./helm/librechat
+librechat_email_domain: "example.com"
+librechat_username: ""
+# Set from secrets/vaults
+librechat_password: ""
+
+librechat_aap_instance_name: aap
+librechat_aap_instance_namespace: aap
+librechat_aap_instance_port: 8086
+librechat_aap_token_placeholder: placeholder
+
+librechat_create_user_job_image: registry.access.redhat.com/ubi10/httpd-24:latest
