@@ -43,6 +43,13 @@
     namespace: openshift-ingress
   register: r_ingress_cert_secret
 
+- name: Role kafka | Task workload | Convert private key to unencrypted PKCS#8 format
+  ansible.builtin.command:
+    cmd: openssl pkey
+    stdin: "{{ r_ingress_cert_secret.resources[0].data['tls.key'] | b64decode }}"
+  register: r_ingress_cert_key_pkcs8
+  changed_when: false
+
 - name: Role kafka | Task workload | Create external certificate secret for Kafka cluster {{ kafka_cluster_name }}
   kubernetes.core.k8s:
     state: present
@@ -55,7 +62,7 @@
       type: kubernetes.io/tls
       data:
         tls.crt: "{{ r_ingress_cert_secret.resources[0].data['tls.crt'] }}"
-        tls.key: "{{ r_ingress_cert_secret.resources[0].data['tls.key'] }}"
+        tls.key: "{{ r_ingress_cert_key_pkcs8.stdout | b64encode }}"
 
 - name: "Role kafka | Task workload | Create Kafka cluster {{ kafka_cluster_name }}"
   kubernetes.core.k8s:
