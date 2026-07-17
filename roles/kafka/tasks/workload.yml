@@ -50,6 +50,15 @@
   register: r_ingress_cert_key_pkcs8
   changed_when: false
 
+- name: Role kafka | Task workload | Parse and deduplicate certificates
+  ansible.builtin.set_fact:
+    unique_certs: >-
+      {{
+        r_ingress_cert_secret.resources[0].data['tls.crt'] | b64decode
+        | regex_findall('(-----BEGIN CERTIFICATE-----(?:.*?\n)*?-----END CERTIFICATE-----)', multiline=True)
+        | unique
+      }}
+
 - name: Role kafka | Task workload | Create external certificate secret for Kafka cluster {{ kafka_cluster_name }}
   kubernetes.core.k8s:
     state: present
@@ -61,7 +70,7 @@
         namespace: "{{ kafka_namespace }}"
       type: kubernetes.io/tls
       data:
-        tls.crt: "{{ r_ingress_cert_secret.resources[0].data['tls.crt'] }}"
+        tls.crt: "{{ (unique_certs | join('\n') ~ '\n') | b64encode }}"
         tls.key: "{{ r_ingress_cert_key_pkcs8.stdout | b64encode }}"
 
 - name: "Role kafka | Task workload | Create Kafka cluster {{ kafka_cluster_name }}"
