@@ -1,8 +1,8 @@
 ---
 
 librechat_litemaas_api_key: ""
-librechat_litemaas_url: https://litellm.apps.maas.redhatworkshops.io/v1
-librechat_litemaas_models: ["llama-scout-17b"]
+librechat_litemaas_url: https://maas-rhdp.apps.maas.redhatworkshops.io/v1
+librechat_litemaas_models: ["qwen3-14b"]
 
 librechat_namespace: librechat
 librechat_repo: https://github.com/danny-avila/LibreChat
